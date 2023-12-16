@@ -6,7 +6,11 @@ authors = ["Leigh Johnson <leigh@printnanny.ai>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
+transformers = "^4.36.1"
+datasets = "^2.15.0"
+click = "^8.1.7"
+docker = "^7.0.0"
 
 
 [build-system]

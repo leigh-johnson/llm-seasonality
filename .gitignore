@@ -1,10 +1,12 @@
 # Created by https://www.toptal.com/developers/gitignore/api/macos,linux,python,latex
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,linux,python,latex
 
+.tmp/
 ### LaTeX ###
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof
+
 *.log
 *.lot
 *.fls
