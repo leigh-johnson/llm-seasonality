@@ -20,7 +20,7 @@ from llm_seasonality.prompt import load_prompt
     default=DatasetEnum.GSM8K,
 )
 @click.option("--dataset-split", type=str, default="test")
-@click.option("--dataset-revision", type=str, default="test")
+@click.option("--dataset-revision", type=str, default="main")
 @click.option(
     "--instruct-model",
     type=click.Choice(
@@ -65,12 +65,13 @@ def main(
     num_return_sequences,
     temperature,
     top_p,
+    verbose,
 ):
     os.environ["TRANSFORMERS_CACHE"] = cache_dir
     os.environ["HF_DATASETS_CACHE"] = cache_dir
 
     now = int(datetime.now().timestamp())
-    dataset_outdir = f"{cache_dir}/experiments/{dataset}_{instruct_model.value}_{prompt_template.value}_num_examples={num_examples}_{now}/"
+    dataset_outdir = f"{cache_dir}/experiments/{dataset}_{instruct_model.value}/{now}/"
 
     tokenizer = AutoTokenizer.from_pretrained(instruct_model.value)
 
@@ -83,12 +84,12 @@ def main(
     )
 
     if instruct_model is InstructEnum.LLAMA2_7B_CHAT_HF:
+        torch_dtype = torch.bfloat16
         if batch_size > 1:
             # ref: https://discuss.huggingface.co/t/llama2-pad-token-for-batched-inference/48020
             tokenizer.pad_token = tokenizer.bos_token
             tokenizer.padding_side = "left"
             # float16 output is gibberish when input is batched; haven't looked into why yet
-            torch_dtype = torch.bfloat16
     elif instruct_model is InstructEnum.CODELLAMA_7B_INSTRUCT_HF:
         torch_dtype = torch.float16
         pipeline_kwargs["pad_token_id"] = tokenizer.eos_token_id
@@ -112,9 +113,13 @@ def main(
         num_return_sequences=num_return_sequences,
     )
 
-    ds = datasets.load(dataset, dataset_revision, split=dataset_split)
+    prompt_kwargs = dict(
+        dataset_revision=dataset_revision,
+        dataset_split=dataset_split,
+        instruct_model=instruct_model,
+    )
 
-    prompt = load_prompt(dataset, dict())
+    prompt = load_prompt(dataset.value, **prompt_kwargs)
     # dataset = dataset.map()
     # annotate dataset with:
     # 1) formatted prompt (inc date)

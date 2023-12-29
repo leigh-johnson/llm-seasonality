@@ -1,9 +1,9 @@
 import importlib
 from typing import Dict, Any
-from llm_seasonality.prompt.base import BaseTask
+from llm_seasonality.prompt.base import BasePrompt
 
 
-def load_prompt(task: str, task_kwargs: Dict[str, Any]) -> BaseTask:
+def load_prompt(task, **kwargs) -> BasePrompt:
     prompt_module = importlib.import_module(f"llm_seasonality.prompt.{task}")
-    prompt = prompt_module.PROMPT(**task_kwargs)
+    prompt = prompt_module.PROMPT(**kwargs)
     return prompt

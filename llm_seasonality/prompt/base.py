@@ -1,7 +1,8 @@
 from enum import Enum
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
-from datasets import Dataset
+import datasets
+
 
 from llm_seasonality.models import InstructEnum, DatasetEnum
 
@@ -14,14 +15,21 @@ class BasePrompt(BaseModel, ABC):
     """
 
     num_examples: int = 1
-    dataset: Dataset
+    dataset_name: DatasetEnum
+    dataset_split: str
+    dataset_revision: str
     instruct_model: InstructEnum
     task_description: str
+
+    def load_dataset(self) -> datasets.Dataset:
+        return datasets.load(
+            self.dataset_name, self.dataset_revision, split=self.dataset_split
+        )
 
     @abstractmethod
     def format_example(self) -> str:
         pass
 
     @abstractmethod
-    def format_prompt(self) -> str:
+    def format_prompt(self, row) -> str:
         pass
