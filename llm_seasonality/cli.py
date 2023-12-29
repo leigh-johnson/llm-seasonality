@@ -34,6 +34,9 @@ from llm_seasonality.prompt import load_prompt
     help="If set to True, this parameter enables decoding strategies such as multinomial sampling, beam-search multinomial sampling, Top-K sampling and Top-p sampling",
 )
 @click.option(
+    "--experiment-dt", type=click.DateTime(formats=["%Y-%m-%d"]), required=False
+)
+@click.option(
     "--instruct-model",
     type=click.Choice(
         InstructEnum,
@@ -73,6 +76,7 @@ def main(
     dataset_split,
     dataset_revision,
     decode_sample,
+    experiment_dt,
     instruct_model,
     max_length,
     num_return_sequences,
@@ -108,6 +112,7 @@ def main(
         model=instruct_model.value,
         task="text-generation",
         tokenizer=tokenizer,
+        num_return_sequences=num_return_sequences,
     )
 
     if instruct_model is InstructEnum.LLAMA2_7B_CHAT_HF:
@@ -138,6 +143,7 @@ def main(
     prompt_kwargs = dict(
         dataset_revision=dataset_revision,
         dataset_split=dataset_split,
+        experiment_dt=experiment_dt,
         instruct_model=instruct_model,
         instruct_model_kwargs=model_kwargs,
         pipeline_kwargs=pipeline_kwargs,

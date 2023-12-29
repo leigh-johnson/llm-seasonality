@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
+from datetime import datetime
 import datasets
 import transformers
 
@@ -24,10 +25,12 @@ class BasePrompt(BaseModel, ABC):
     dataset_name: DatasetEnum
     dataset_split: str
     dataset_revision: str
+    experiment_dt: None | datetime
     instruct_model: InstructEnum
     pipeline_kwargs: PipelineParams
     instruct_model_kwargs: ModelParams
     task_description: str
+    date_experiment: bool = False
 
     col_accuracy: str = "accuracy"
     col_prompt: str = "prompt"
