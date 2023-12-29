@@ -1,6 +1,22 @@
 from llm_seasonality.prompt.base import BasePrompt
 from llm_seasonality.models import DatasetEnum
 
+ANSWER_TOKEN = "####"  # indictates the final answer in ground truth
+
+
+def parse_final_answer(text: str) -> str:
+    """
+    Parse final result line in GSM8k dataset
+
+    Example input:
+    Natalia sold 48/2 = <<48/2=24>>24 clips in May. Natalia sold 48+24 = <<48+24=72>>72 clips altogether in April and May.
+    #### 72
+
+    Example output:
+    72
+    """
+    return text.split(ANSWER_TOKEN)[-1].strip()
+
 
 class Gsm8kPrompt(BasePrompt):
     dataset_name: DatasetEnum = DatasetEnum.GSM8K
@@ -30,6 +46,11 @@ print(ans)
 
 {question}[/INST]"""
         row["prompt"] = prompt
+        return row
+
+    def calc_accuracy(self, row):
+        expected = parse_final_answer(row["answer"])
+        row[self.col_accuracy] = expected in row[self.col_stdout]
         return row
 
 

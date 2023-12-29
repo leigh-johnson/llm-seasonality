@@ -7,7 +7,12 @@ import datasets
 from transformers import AutoTokenizer
 from transformers import pipeline as hf_pipeline
 
-from llm_seasonality.models import InstructEnum, DatasetEnum
+from llm_seasonality.models import (
+    InstructEnum,
+    DatasetEnum,
+    ModelParams,
+    PipelineParams,
+)
 from llm_seasonality.prompt import load_prompt
 
 
@@ -21,6 +26,13 @@ from llm_seasonality.prompt import load_prompt
 )
 @click.option("--dataset-split", type=str, default="test")
 @click.option("--dataset-revision", type=str, default="main")
+@click.option(
+    "--decode-sample",
+    is_flag=True,
+    show_default=True,
+    default=False,
+    help="If set to True, this parameter enables decoding strategies such as multinomial sampling, beam-search multinomial sampling, Top-K sampling and Top-p sampling",
+)
 @click.option(
     "--instruct-model",
     type=click.Choice(
@@ -60,6 +72,7 @@ def main(
     dataset,
     dataset_split,
     dataset_revision,
+    decode_sample,
     instruct_model,
     max_length,
     num_return_sequences,
@@ -75,12 +88,26 @@ def main(
 
     tokenizer = AutoTokenizer.from_pretrained(instruct_model.value)
 
+    # https://huggingface.co/docs/transformers/main/model_doc/llama#transformers.LlamaForCausalLM
+    # model_kwargs are passed to LlamaForCausalLM.from_pretrained
+    # These override config.json values: https://huggingface.co/meta-llama/Llama-2-7b-chat-hf/blob/main/config.json
+    model_kwargs = ModelParams(
+        do_sample=decode_sample,
+        temperature=temperature,
+        top_p=top_p,
+        max_length=max_length,
+    )
+
     # generate kwargs are passed to $pipeline_instance.__call__ which is equivalent to $model.generate()
     # These override generation_config.json values: https://huggingface.co/meta-llama/Llama-2-7b-chat-hf/blob/main/generation_config.json
-    pipeline_kwargs = dict(
-        max_length=max_length,
-        eos_token_id=tokenizer.eos_token_id,
+    pipeline_kwargs = PipelineParams(
         batch_size=batch_size,
+        device_map="auto",
+        eos_token_id=tokenizer.eos_token_id,
+        max_length=max_length,
+        model=instruct_model.value,
+        task="text-generation",
+        tokenizer=tokenizer,
     )
 
     if instruct_model is InstructEnum.LLAMA2_7B_CHAT_HF:
@@ -97,29 +124,27 @@ def main(
             tokenizer.pad_token = tokenizer.eos_token
             tokenizer.padding_side = "left"
 
-    # https://huggingface.co/docs/transformers/main/model_doc/llama#transformers.LlamaForCausalLM
-    # model_kwargs are passed to LlamaForCausalLM.from_pretrained
-    # These override config.json values: https://huggingface.co/meta-llama/Llama-2-7b-chat-hf/blob/main/config.json
-    model_kwargs = dict(temperature=temperature, top_p=top_p, max_length=max_length)
-
-    pipeline = hf_pipeline(
-        task="text-generation",
-        model=instruct_model.value,
-        device_map="auto",
-        torch_dtype=torch_dtype,
-        batch_size=batch_size,
-        model_kwargs=model_kwargs,
-        tokenizer=tokenizer,
-        num_return_sequences=num_return_sequences,
-    )
+    # pipeline = hf_pipeline(
+    #     task="text-generation",
+    #     model=instruct_model.value,
+    #     device_map="auto",
+    #     # torch_dtype=torch_dtype,
+    #     batch_size=batch_size,
+    #     model_kwargs=dict(model_kwargs),
+    #     tokenizer=tokenizer,
+    #     num_return_sequences=num_return_sequences,
+    # )
 
     prompt_kwargs = dict(
         dataset_revision=dataset_revision,
         dataset_split=dataset_split,
         instruct_model=instruct_model,
+        instruct_model_kwargs=model_kwargs,
+        pipeline_kwargs=pipeline_kwargs,
     )
 
     prompt = load_prompt(dataset.value, **prompt_kwargs)
+    prompt.run()
     # dataset = dataset.map()
     # annotate dataset with:
     # 1) formatted prompt (inc date)
