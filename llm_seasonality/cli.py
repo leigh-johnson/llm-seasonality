@@ -141,6 +141,7 @@ def main(
     # )
 
     prompt_kwargs = dict(
+        dataset_outdir=dataset_outdir,
         dataset_revision=dataset_revision,
         dataset_split=dataset_split,
         experiment_dt=experiment_dt,

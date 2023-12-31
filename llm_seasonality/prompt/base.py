@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field, ConfigDict
+from functools import cached_property
 from datetime import datetime
+from tqdm import tqdm
 import datasets
 import transformers
 
@@ -21,10 +23,13 @@ class BasePrompt(BaseModel, ABC):
     This class is responsible for prompt formatting
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     num_examples: int = 1
     dataset_name: DatasetEnum
     dataset_split: str
     dataset_revision: str
+    dataset_outdir: str
     experiment_dt: None | datetime
     instruct_model: InstructEnum
     pipeline_kwargs: PipelineParams
@@ -33,10 +38,19 @@ class BasePrompt(BaseModel, ABC):
     date_experiment: bool = False
 
     col_accuracy: str = "accuracy"
-    col_prompt: str = "prompt"
-    col_codegen: str = "codegen"
-    col_stdout: str = "stdout"
-    col_stderr: str = "stderr"
+    col_input: str = "input"
+    col_output: str = "output"
+    col_error: str = "error"
+    col_output_token_len: str = "output_token_len"
+    col_input_perplexity: str = "input_perplexity"
+    col_output_perplexoty: str = "output_perplexity"
+
+    @computed_field
+    @cached_property
+    def pipeline(self) -> transformers.Pipeline:
+        pipeline_kwargs = dict(self.pipeline_kwargs)
+        model_kwargs = dict(self.instruct_model_kwargs)
+        return transformers.pipeline(model_kwargs=model_kwargs, **pipeline_kwargs)
 
     def load_dataset(self) -> datasets.Dataset:
         return datasets.load_dataset(
@@ -47,22 +61,43 @@ class BasePrompt(BaseModel, ABC):
         dataset = self.load_dataset()
         return dataset.map(self.format_prompt)
 
-    def load_pipeline(self) -> transformers.Pipeline:
-        pipeline_kwargs = dict(self.pipeline_kwargs)
-        model_kwargs = dict(self.instruct_model_kwargs)
-        return transformers.pipeline(model_kwargs=model_kwargs, **pipeline_kwargs)
-
     def run(self):
         dataset = self.load_annotated_dataset()
-        pipe = self.load_pipeline()
-        for out in pipe(
-            KeyDataset(dataset, self.col_prompt),
-            batch_size=self.pipeline_kwargs.batch_size,
+        codegen = []
+        print("Running pipeline")
+        for out in tqdm(
+            self.pipeline(
+                KeyDataset(dataset, self.col_input),
+                batch_size=self.pipeline_kwargs.batch_size,
+            )
         ):
-            print(out)
+            codegen.append([x["generated_text"] for x in out])
+        dataset.add_column(self.col_output, codegen)
+        print("Executing code in a sandboxed container")
+        dataset.map(self.run_program)
+        print("Calculating accuracy")
+        dataset.map(self.calc_accuracy)
+        print("Calculating codegen len")
+        dataset.map(self.calc_codegen_len)
+        print("Calculating codegen length")
+        dataset.map(self.calc_perplexity)
+        print("Saving results to disk")
+        dataset.save_to_disk()
 
     @abstractmethod
     def calc_accuracy(self, row) -> str:
+        pass
+
+    @abstractmethod
+    def run_program(self, row) -> str:
+        pass
+
+    @abstractmethod
+    def calc_codegen_len(self, row) -> str:
+        pass
+
+    @abstractmethod
+    def calc_perplexity(self, row) -> str:
         pass
 
     @abstractmethod
