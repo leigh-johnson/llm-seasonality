@@ -71,13 +71,13 @@ print(ans)
         perplexity = evaluate.load("perplexity", module_type="metric")
         # calc perplexity of input prompt
         input_perplexity = perplexity.compute(
-            model_id=self.instruct_model, predictions=row[self.col_input]
+            model_id=self.instruct_model.value, predictions=row[self.col_input]
         )["perplexities"]
         row[self.col_input_perplexity] = input_perplexity
 
         # calc perplexity of output codegen
         output_perplexity = perplexity.compute(
-            model_id=self.instruct_model, predictions=row[self.col_textgen]
+            model_id=self.instruct_model.value, predictions=row[self.col_textgen]
         )["perplexities"]
 
         row[self.col_output_perplexity] = output_perplexity

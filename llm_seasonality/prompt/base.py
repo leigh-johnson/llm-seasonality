@@ -57,7 +57,7 @@ class BasePrompt(BaseModel, ABC):
 
     def load_dataset(self) -> datasets.Dataset:
         return datasets.load_dataset(
-            self.dataset_name, self.dataset_revision, split=self.dataset_split
+            self.dataset_name.value, self.dataset_revision, split=self.dataset_split
         )
 
     def load_annotated_dataset(self) -> datasets.Dataset:
