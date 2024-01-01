@@ -9,7 +9,7 @@ import transformers
 
 from transformers.pipelines.pt_utils import KeyDataset
 
-from llm_seasonality.utils import extract_python_code, run_python_code
+from llm_seasonality.utils import run_python_code
 from llm_seasonality.models import (
     InstructEnum,
     DatasetEnum,
@@ -75,18 +75,18 @@ class BasePrompt(BaseModel, ABC):
                 batch_size=self.pipeline_kwargs.batch_size,
             )
         ):
-            codegen.append([x["generated_text"] for x in out])
-        dataset.add_column(self.col_output, codegen)
+            codegen.append([x["generated_text"][0] for x in out])
+        dataset = dataset.add_column(self.col_textgen, codegen)
         print("Executing code in a sandboxed container")
-        dataset.map(self.run_program)
+        dataset = dataset.map(self.run_program)
         print("Calculating accuracy")
-        dataset.map(self.calc_accuracy)
+        dataset = dataset.map(self.calc_accuracy)
         print("Calculating codegen len")
-        dataset.map(self.calc_codegen_len)
+        dataset = dataset.map(self.calc_codegen_len)
         print("Calculating codegen length")
-        dataset.map(self.calc_perplexity)
+        dataset = dataset.map(self.calc_perplexity)
         print("Saving results to disk")
-        dataset.save_to_disk()
+        dataset.save_to_disk(self.dataset_outdir)
 
     def run_program(self, row: LazyDict) -> LazyDict:
         return run_python_code(row, self.col_textgen, self.col_output, self.col_error)
