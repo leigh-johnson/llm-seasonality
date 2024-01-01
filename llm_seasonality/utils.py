@@ -1,12 +1,13 @@
 import docker
 import re
+from datasets.formatting.formatting import LazyDict
 
 DOCKER_TAG = "python:3.11"
 
 
 def extract_python_code(
-    row, input_column: str = "generated", output_column="program", regex="```(.*)```"
-):
+    row: LazyDict, input_column: str, regex="```(.*)```"
+) -> None | str:
     """
     Extracts python code between separator tokens: ```
     """
@@ -14,19 +15,19 @@ def extract_python_code(
     match = re.search(regex, row[input_column], flags=re.DOTALL)
 
     if match is None:
-        row[output_column] = match
+        return None
     else:
-        row[output_column] = match.group(0).replace("```", "")
-    return row
+        return match.group(0).replace("```", "")
 
 
 def run_python_code(
     row,
-    input_column: str = "input",
-    output_column="output",
-    error_column="error",
+    input_column: str,
+    output_column: str,
+    error_column: str,
 ):
-    command = ["python3", "-c", row[input_column]]
+    code = extract_python_code(row, input_column)
+    command = ["python3", "-c", code]
     client = docker.from_env()
     try:
         result = client.containers.run(

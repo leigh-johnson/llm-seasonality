@@ -3,11 +3,13 @@ from pydantic import BaseModel, computed_field, ConfigDict
 from functools import cached_property
 from datetime import datetime
 from tqdm import tqdm
+from datasets.formatting.formatting import LazyDict
 import datasets
 import transformers
 
 from transformers.pipelines.pt_utils import KeyDataset
 
+from llm_seasonality.utils import extract_python_code, run_python_code
 from llm_seasonality.models import (
     InstructEnum,
     DatasetEnum,
@@ -39,11 +41,13 @@ class BasePrompt(BaseModel, ABC):
 
     col_accuracy: str = "accuracy"
     col_input: str = "input"
+    col_textgen: str = "textgen"
     col_output: str = "output"
     col_error: str = "error"
-    col_output_token_len: str = "output_token_len"
+
+    col_textgen_len: str = "textgen_len"
     col_input_perplexity: str = "input_perplexity"
-    col_output_perplexoty: str = "output_perplexity"
+    col_textgen_perplexity: str = "textgen_perplexity"
 
     @computed_field
     @cached_property
@@ -84,20 +88,19 @@ class BasePrompt(BaseModel, ABC):
         print("Saving results to disk")
         dataset.save_to_disk()
 
+    def run_program(self, row: LazyDict) -> LazyDict:
+        return run_python_code(row, self.col_textgen, self.col_output, self.col_error)
+
     @abstractmethod
-    def calc_accuracy(self, row) -> str:
+    def calc_accuracy(self, row: LazyDict) -> LazyDict:
         pass
 
     @abstractmethod
-    def run_program(self, row) -> str:
+    def calc_codegen_len(self, row: LazyDict) -> LazyDict:
         pass
 
     @abstractmethod
-    def calc_codegen_len(self, row) -> str:
-        pass
-
-    @abstractmethod
-    def calc_perplexity(self, row) -> str:
+    def calc_perplexity(self, row: LazyDict) -> LazyDict:
         pass
 
     @abstractmethod
@@ -105,5 +108,5 @@ class BasePrompt(BaseModel, ABC):
         pass
 
     @abstractmethod
-    def format_prompt(self, row) -> str:
+    def format_prompt(self, row: LazyDict) -> str:
         pass
