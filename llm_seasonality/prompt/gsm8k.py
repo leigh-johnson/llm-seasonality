@@ -38,9 +38,11 @@ print(ans)
     def format_prompt(self, row):
         question = row["question"]
         examples = self.format_example()
-        if self.date_experiment:
-            date_description = "Today's date is {}"
-        prompt = f"""<s>[INST] <<SYS>>
+        if self.experiment_dt is not None:
+            date_description = f"Today's date is {self.experiment_dt}"
+        else:
+            date_description = ""
+        prompt = f"""<s>[INST] <<SYS>>{date_description}
 {self.task_description}
 
 
@@ -52,8 +54,11 @@ print(ans)
         return row
 
     def calc_accuracy(self, row):
-        expected = parse_final_answer(row["answer"])
-        row[self.col_accuracy] = expected in row[self.col_stdout]
+        if row[self.col_error] is False:
+            expected = parse_final_answer(row["answer"])
+            row[self.col_accuracy] = expected in row[self.col_output]
+        else:
+            row[self.col_accuracy] = False
         return row
 
     def calc_codegen_len(self, row) -> str:

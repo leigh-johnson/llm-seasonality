@@ -129,17 +129,6 @@ def main(
             tokenizer.pad_token = tokenizer.eos_token
             tokenizer.padding_side = "left"
 
-    # pipeline = hf_pipeline(
-    #     task="text-generation",
-    #     model=instruct_model.value,
-    #     device_map="auto",
-    #     # torch_dtype=torch_dtype,
-    #     batch_size=batch_size,
-    #     model_kwargs=dict(model_kwargs),
-    #     tokenizer=tokenizer,
-    #     num_return_sequences=num_return_sequences,
-    # )
-
     prompt_kwargs = dict(
         dataset_outdir=dataset_outdir,
         dataset_revision=dataset_revision,

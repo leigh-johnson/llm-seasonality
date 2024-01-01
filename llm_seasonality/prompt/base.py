@@ -32,12 +32,11 @@ class BasePrompt(BaseModel, ABC):
     dataset_split: str
     dataset_revision: str
     dataset_outdir: str
-    experiment_dt: None | datetime
+    experiment_dt: None | str
     instruct_model: InstructEnum
     pipeline_kwargs: PipelineParams
     instruct_model_kwargs: ModelParams
     task_description: str
-    date_experiment: bool = False
 
     col_accuracy: str = "accuracy"
     col_input: str = "input"
@@ -75,7 +74,9 @@ class BasePrompt(BaseModel, ABC):
                 batch_size=self.pipeline_kwargs.batch_size,
             )
         ):
-            codegen.append([x["generated_text"][0] for x in out])
+            for row in out:
+                codegen.append(row["generated_text"])
+
         dataset = dataset.add_column(self.col_textgen, codegen)
         print("Executing code in a sandboxed container")
         dataset = dataset.map(self.run_program)
