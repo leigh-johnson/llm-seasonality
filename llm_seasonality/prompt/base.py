@@ -99,7 +99,6 @@ class BasePrompt(BaseModel, ABC):
         # calc perplexity of input prompt
         input_perplexity = perplexity.compute(
             stride=self.pipeline_kwargs.batch_size,
-            model_id=self.instruct_model.value,
             predictions=row[self.col_input],
         )["perplexities"]
         row[self.col_input_perplexity] = input_perplexity
@@ -107,7 +106,6 @@ class BasePrompt(BaseModel, ABC):
         # calc perplexity of output codegen
         output_perplexity = perplexity.compute(
             stride=self.pipeline_kwargs.batch_size,
-            model_id=self.instruct_model.value,
             predictions=row[self.col_textgen],
         )["perplexities"]
 
