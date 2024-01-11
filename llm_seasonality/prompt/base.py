@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, computed_field, ConfigDict
 from functools import cached_property
-from datetime import datetime
 from tqdm import tqdm
 from datasets.formatting.formatting import LazyDict
 import datasets
 import transformers
+import evaluate
 
 from transformers.pipelines.pt_utils import KeyDataset
 
@@ -16,8 +16,6 @@ from llm_seasonality.models import (
     PipelineParams,
     ModelParams,
 )
-
-ANSWER_TOKEN = "####"  # indictates the final answer in ground truth
 
 
 class BasePrompt(BaseModel, ABC):
@@ -92,16 +90,37 @@ class BasePrompt(BaseModel, ABC):
     def run_program(self, row: LazyDict) -> LazyDict:
         return run_python_code(row, self.col_textgen, self.col_output, self.col_error)
 
+    def calc_perplexity(self, row) -> str:
+        perplexity = evaluate.load(
+            "/mnt/spindle/hf-evaluate/perplexity",
+            module_type="measurement",
+            model_id=self.instruct_model.value,
+        )
+        # calc perplexity of input prompt
+        input_perplexity = perplexity.compute(
+            stride=self.pipeline_kwargs.batch_size,
+            model_id=self.instruct_model.value,
+            predictions=row[self.col_input],
+        )["perplexities"]
+        row[self.col_input_perplexity] = input_perplexity
+
+        # calc perplexity of output codegen
+        output_perplexity = perplexity.compute(
+            stride=self.pipeline_kwargs.batch_size,
+            model_id=self.instruct_model.value,
+            predictions=row[self.col_textgen],
+        )["perplexities"]
+
+        row[self.col_output_perplexity] = output_perplexity
+
+        return row
+
     @abstractmethod
     def calc_accuracy(self, row: LazyDict) -> LazyDict:
         pass
 
     @abstractmethod
     def calc_codegen_len(self, row: LazyDict) -> LazyDict:
-        pass
-
-    @abstractmethod
-    def calc_perplexity(self, row: LazyDict) -> LazyDict:
         pass
 
     @abstractmethod

@@ -1,4 +1,3 @@
-import evaluate
 from llm_seasonality.prompt.base import BasePrompt
 from llm_seasonality.models import DatasetEnum
 
@@ -65,27 +64,6 @@ print(ans)
         tokenizer = self.pipeline.tokenizer
         token_len = tokenizer.encode(row[self.col_textgen])
         row[self.col_textgen_len] = token_len
-        return row
-
-    def calc_perplexity(self, row) -> str:
-        perplexity = evaluate.load("perplexity", module_type="metric")
-        # calc perplexity of input prompt
-        input_perplexity = perplexity.compute(
-            batch_size=1,
-            model_id=self.instruct_model.value,
-            predictions=row[self.col_input],
-        )["perplexities"]
-        row[self.col_input_perplexity] = input_perplexity
-
-        # calc perplexity of output codegen
-        output_perplexity = perplexity.compute(
-            batch_size=1,
-            model_id=self.instruct_model.value,
-            predictions=row[self.col_textgen],
-        )["perplexities"]
-
-        row[self.col_output_perplexity] = output_perplexity
-
         return row
 
 

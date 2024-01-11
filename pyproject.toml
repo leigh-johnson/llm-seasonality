@@ -15,7 +15,7 @@ torch = "^2.1.2"
 pydantic = "^2.5.2"
 accelerate = "^0.25.0"
 tqdm = "^4.66.1"
-evaluate = "^0.4.1"
+evaluate = {extras = ["template"], version = "^0.4.1"}
 
 
 [build-system]

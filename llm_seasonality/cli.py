@@ -2,10 +2,8 @@ import click
 import os
 from datetime import datetime
 import torch
-import datasets
 
 from transformers import AutoTokenizer
-from transformers import pipeline as hf_pipeline
 
 from llm_seasonality.models import (
     InstructEnum,
@@ -30,7 +28,7 @@ from llm_seasonality.prompt import load_prompt
     "--decode-sample",
     is_flag=True,
     show_default=True,
-    default=False,
+    default=True,
     help="If set to True, this parameter enables decoding strategies such as multinomial sampling, beam-search multinomial sampling, Top-K sampling and Top-p sampling",
 )
 @click.option(
@@ -141,12 +139,6 @@ def main(
 
     prompt = load_prompt(dataset.value, **prompt_kwargs)
     prompt.run()
-    # dataset = dataset.map()
-    # annotate dataset with:
-    # 1) formatted prompt (inc date)
-    # 2) generated text
-    # 3) is answer correct?
-    # 4) measure length
 
 
 if __name__ == "__main__":
